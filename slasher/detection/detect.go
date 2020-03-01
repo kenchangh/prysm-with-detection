@@ -23,7 +23,7 @@ func (ds *Service) detectAttesterSlashings(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not detect surround votes on attestation")
 		}
-		doubleAttSlashings, err := ds.detectDoubleVotes(ctx, att)
+		doubleAttSlashings, err := ds.detectDoubleVotes(ctx, valIdx, att)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not detect double votes on attestation")
 		}
@@ -36,8 +36,9 @@ func (ds *Service) detectAttesterSlashings(
 	return slashings, nil
 }
 
-func alertOwner(mode string, message string) {
+func alertOwner(mode string, slot uint64) {
 	url := fmt.Sprintf("http://localhost:5000/alert/%s", mode)
+	message := fmt.Sprintf("Double vote detected at slot %d", slot)
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(message)))
 	req.Header.Set("Content-Type", "application/json")
@@ -46,13 +47,9 @@ func alertOwner(mode string, message string) {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Failed to alert owner")
+		panic("Failed to alert owner")
 	}
 	defer resp.Body.Close()
-}
-
-func alertOwnerDoubleVote(slot uint64) {
-	message := fmt.Sprintf("Double vote detected at slot %d", slot)
-	alertOwner("telegram", message)
 }
 
 var attestedSlots = map[uint64]string{}
@@ -62,10 +59,18 @@ var alerted = map[uint64]bool{}
 // TODO(#4589): Implement.
 func (ds *Service) detectDoubleVotes(
 	ctx context.Context,
+	validatorIdx uint64,
 	att *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
 
 	slot := att.Data.Slot
+
+	fmt.Printf("%d", validatorIdx)
+	pubkey, err := ds.slasherDB.ValidatorPubKey(ctx, validatorIdx)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%v", pubkey)
 
 	if prevdata, exists := attestedSlots[slot]; exists {
 		if att.Data.String() != prevdata {
@@ -73,7 +78,7 @@ func (ds *Service) detectDoubleVotes(
 			if isAlerted := alerted[slot]; !isAlerted {
 				alerted[slot] = true
 				fmt.Printf("Double vote detected at slot %d. Alert owner\n", slot)
-				alertOwnerDoubleVote(slot)
+				alertOwner("telegram", slot)
 			}
 		}
 	} else {
