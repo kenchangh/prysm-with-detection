@@ -34,7 +34,8 @@ func (ds *Service) detectAttesterSlashings(
 	return slashings, nil
 }
 
-var globalstuff = map[uint64]string{}
+var attestedSlots = map[uint64]string{}
+var alerted = map[uint64]bool{}
 
 // detectDoubleVote --
 // TODO(#4589): Implement.
@@ -43,15 +44,20 @@ func (ds *Service) detectDoubleVotes(
 	att *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
 
-	if prevdata, exists := globalstuff[att.Data.Slot]; exists {
+	slot := att.Data.Slot
+
+	if prevdata, exists := attestedSlots[slot]; exists {
 		if att.Data.String() != prevdata {
-			fmt.Println("asiodjasdi")
+
+			if isAlerted := alerted[slot]; !isAlerted {
+				alerted[slot] = true
+				fmt.Printf("Double vote detected at slot %d. Alert owner\n", slot)
+			}
+
 		}
 	} else {
-		globalstuff[att.Data.Slot] = att.Data.String()
+		attestedSlots[att.Data.Slot] = att.Data.String()
 	}
-
-	fmt.Printf("%v\n", globalstuff)
 
 	return nil, nil
 }

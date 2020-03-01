@@ -215,7 +215,7 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 		max := 10
 		min := 0
 		randnum := rand.Intn(max-min) + min
-		if randnum < 9 {
+		if randnum < 5 {
 			var checkpoint ethpb.Checkpoint
 			data.Source = &checkpoint
 		}
