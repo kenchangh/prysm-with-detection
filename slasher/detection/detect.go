@@ -65,15 +65,16 @@ func (ds *Service) detectDoubleVotes(
 
 	slot := att.Data.Slot
 
-	fmt.Printf("%d", validatorIdx)
+	fmt.Printf("%d ", validatorIdx)
 	pubkey, err := ds.slasherDB.ValidatorPubKey(ctx, validatorIdx)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("%v", pubkey)
+	fmt.Printf("%v ", pubkey) // this is an empty bytes
 
 	if prevdata, exists := attestedSlots[slot]; exists {
 		if att.Data.String() != prevdata {
+			alerted[slot] = true
 
 			if isAlerted := alerted[slot]; !isAlerted {
 				alerted[slot] = true
