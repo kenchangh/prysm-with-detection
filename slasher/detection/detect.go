@@ -3,6 +3,7 @@ package detection
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 
@@ -36,9 +37,8 @@ func (ds *Service) detectAttesterSlashings(
 	return slashings, nil
 }
 
-func alertOwner(mode string, slot uint64) {
+func alertOwner(mode string, message string) {
 	url := fmt.Sprintf("http://localhost:5000/alert/%s", mode)
-	message := fmt.Sprintf("Double vote detected at slot %d", slot)
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(message)))
 	req.Header.Set("Content-Type", "application/json")
@@ -63,28 +63,27 @@ func (ds *Service) detectDoubleVotes(
 	att *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
 
-	err := ds.beaconClient.GetValidator(ctx, validatorIdx)
+	validator, err := ds.beaconClient.GetValidator(ctx, validatorIdx)
+
+	hexValidatorPubkey := make([]byte, hex.EncodedLen(len(validator.PublicKey)))
+	hex.Encode(hexValidatorPubkey, validator.PublicKey)
+
+	fmt.Printf("%s\n", hexValidatorPubkey)
 	if err != nil {
 		panic(err)
 	}
 
 	slot := att.Data.Slot
 
-	fmt.Printf("%d ", validatorIdx)
-	pubkey, err := ds.slasherDB.ValidatorPubKey(ctx, validatorIdx)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("%v ", pubkey) // this is an empty bytes
-
 	if prevdata, exists := attestedSlots[slot]; exists {
 		if att.Data.String() != prevdata {
-			alerted[slot] = true
+			// alerted[slot] = true
 
 			if isAlerted := alerted[slot]; !isAlerted {
 				alerted[slot] = true
 				fmt.Printf("Double vote detected at slot %d. Alert owner\n", slot)
-				alertOwner("telegram", slot)
+				msg := fmt.Sprintf("{\"slot\": %d, \"pubkey\": \"%s\"}", slot, hexValidatorPubkey)
+				alertOwner("telegram", msg)
 			}
 		}
 	} else {

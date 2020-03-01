@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 
-	"fmt"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -122,19 +121,18 @@ func (bs *Service) Status() error {
 	return nil
 }
 
-func (bs *Service) GetValidator(ctx context.Context, validatorIdx uint64) error {
+func (bs *Service) GetValidator(ctx context.Context, validatorIdx uint64) (*ethpb.Validator, error) {
 	request := &ethpb.GetValidatorRequest{
 		QueryFilter: &ethpb.GetValidatorRequest_Index{
 			Index: 0,
 		},
 	}
 	res, err := bs.beaconClient.GetValidator(ctx, request)
-	fmt.Printf("%v", res)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return res, nil
 }
 
 // Start the main runtime of the beaconclient service, initializing
