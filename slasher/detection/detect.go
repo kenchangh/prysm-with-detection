@@ -1,8 +1,10 @@
 package detection
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -34,6 +36,25 @@ func (ds *Service) detectAttesterSlashings(
 	return slashings, nil
 }
 
+func alertOwner(mode string, message string) {
+	url := fmt.Sprintf("http://localhost:5000/alert/%s", mode)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(message)))
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Failed to alert owner")
+	}
+	defer resp.Body.Close()
+}
+
+func alertOwnerDoubleVote(slot uint64) {
+	message := fmt.Sprintf("Double vote detected at slot %d", slot)
+	alertOwner("telegram", message)
+}
+
 var attestedSlots = map[uint64]string{}
 var alerted = map[uint64]bool{}
 
@@ -52,8 +73,8 @@ func (ds *Service) detectDoubleVotes(
 			if isAlerted := alerted[slot]; !isAlerted {
 				alerted[slot] = true
 				fmt.Printf("Double vote detected at slot %d. Alert owner\n", slot)
+				alertOwnerDoubleVote(slot)
 			}
-
 		}
 	} else {
 		attestedSlots[att.Data.Slot] = att.Data.String()
