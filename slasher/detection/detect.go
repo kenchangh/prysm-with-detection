@@ -63,6 +63,11 @@ func (ds *Service) detectDoubleVotes(
 	att *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
 
+	err := ds.beaconClient.GetValidator(ctx, validatorIdx)
+	if err != nil {
+		panic(err)
+	}
+
 	slot := att.Data.Slot
 
 	fmt.Printf("%d ", validatorIdx)

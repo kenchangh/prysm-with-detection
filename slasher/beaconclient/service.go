@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 
+	"fmt"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -117,6 +118,21 @@ func (bs *Service) Stop() error {
 func (bs *Service) Status() error {
 	if bs.conn == nil {
 		return errors.New("no connection to beacon RPC")
+	}
+	return nil
+}
+
+func (bs *Service) GetValidator(ctx context.Context, validatorIdx uint64) error {
+	request := &ethpb.GetValidatorRequest{
+		QueryFilter: &ethpb.GetValidatorRequest_Index{
+			Index: 0,
+		},
+	}
+	res, err := bs.beaconClient.GetValidator(ctx, request)
+	fmt.Printf("%v", res)
+
+	if err != nil {
+		return err
 	}
 	return nil
 }
