@@ -124,7 +124,7 @@ func (bs *Service) Status() error {
 func (bs *Service) GetValidator(ctx context.Context, validatorIdx uint64) (*ethpb.Validator, error) {
 	request := &ethpb.GetValidatorRequest{
 		QueryFilter: &ethpb.GetValidatorRequest_Index{
-			Index: 0,
+			Index: validatorIdx,
 		},
 	}
 	res, err := bs.beaconClient.GetValidator(ctx, request)
